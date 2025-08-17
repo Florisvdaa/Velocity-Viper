@@ -1,4 +1,3 @@
-// GridMover.cs
 using UnityEngine;
 
 [RequireComponent(typeof(Transform))]

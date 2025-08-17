@@ -1,4 +1,3 @@
-// Grid2D.cs
 using UnityEngine;
 
 [ExecuteAlways]
@@ -14,7 +13,7 @@ public class Grid2D : MonoBehaviour
     {
         float x = origin.x + (gridPos.x + 0.5f) * cellSize;
         float z = origin.z + (gridPos.y + 0.5f) * cellSize;
-        return new Vector3(x, transform.position.y, z);
+        return new Vector3(x, transform.position.y + .5f, z);
     }
 
     public Vector2Int WorldToGrid(Vector3 worldPos)
