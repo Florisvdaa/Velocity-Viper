@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6717091832581069998}
   - component: {fileID: 6064296270560664658}
   - component: {fileID: 1805970681304002084}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Sphere
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -65,7 +65,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e9283cbada8ce1a42afc1890e821c9b8, type: 2}
+  - {fileID: 2100000, guid: e3c71947bd320784f8813d5857d359ef, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -117,7 +117,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1162953175451953367}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Body visual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
