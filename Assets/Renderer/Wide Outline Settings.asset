@@ -1,5 +1,42 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6627185401943928463
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8345be34a994929ba7ca6c0b1a5c5c7, type: 3}
+  m_Name: Outline
+  m_EditorClassIdentifier: 
+  silhouetteMaterial: {fileID: 0}
+  silhouetteMaterialInstanced: {fileID: 0}
+  informationMaterial: {fileID: 0}
+  informationMaterialInstanced: {fileID: 0}
+  isActive: 0
+  customDepthEnabled: 0
+  disableWidthControl: 1
+  RenderingLayer:
+    serializedVersion: 0
+    m_Bits: 1026
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 512
+  renderQueue: 0
+  occlusion: 0
+  cullingMode: 0
+  closedLoop: 0
+  alphaCutout: 0
+  alphaCutoutTexture: {fileID: 0}
+  alphaCutoutThreshold: 0.5
+  alphaCutoutUVTransform: {x: 0, y: 0, z: 0, w: 0}
+  gpuInstancing: 0
+  vertexAnimation: 0
+  color: {r: 1, g: 0.8160377, b: 0.8160377, a: 1}
+  width: 20
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12,10 +49,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1beecfe6c40d4fc397be59c6d99409a5, type: 3}
   m_Name: Wide Outline Settings
   m_EditorClassIdentifier: 
-  injectionPoint: 600
+  injectionPoint: 450
   showInSceneView: 1
   outlines:
   - {fileID: 7352254260813538524}
+  - {fileID: -6627185401943928463}
+  - {fileID: 7399759192107949542}
   materialType: 0
   customMaterial: {fileID: 0}
   widthControl: 0
@@ -40,15 +79,15 @@ MonoBehaviour:
   silhouetteMaterialInstanced: {fileID: 0}
   informationMaterial: {fileID: 0}
   informationMaterialInstanced: {fileID: 0}
-  isActive: 1
+  isActive: 0
   customDepthEnabled: 0
   disableWidthControl: 1
   RenderingLayer:
     serializedVersion: 0
-    m_Bits: 4294967295
+    m_Bits: 258
   layerMask:
     serializedVersion: 2
-    m_Bits: 8
+    m_Bits: 256
   renderQueue: 0
   occlusion: 0
   cullingMode: 0
@@ -60,4 +99,41 @@ MonoBehaviour:
   gpuInstancing: 0
   vertexAnimation: 0
   color: {r: 0.5169763, g: 1.145783, b: 1.1784837, a: 1}
+  width: 20
+--- !u!114 &7399759192107949542
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8345be34a994929ba7ca6c0b1a5c5c7, type: 3}
+  m_Name: Outline
+  m_EditorClassIdentifier: 
+  silhouetteMaterial: {fileID: 0}
+  silhouetteMaterialInstanced: {fileID: 0}
+  informationMaterial: {fileID: 0}
+  informationMaterialInstanced: {fileID: 0}
+  isActive: 1
+  customDepthEnabled: 0
+  disableWidthControl: 1
+  RenderingLayer:
+    serializedVersion: 0
+    m_Bits: 2
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 128
+  renderQueue: 0
+  occlusion: 0
+  cullingMode: 1
+  closedLoop: 0
+  alphaCutout: 0
+  alphaCutoutTexture: {fileID: 0}
+  alphaCutoutThreshold: 0.987
+  alphaCutoutUVTransform: {x: 0, y: 0, z: 0, w: 0}
+  gpuInstancing: 0
+  vertexAnimation: 0
+  color: {r: 0, g: 0.73424315, b: 1, a: 1}
   width: 20

@@ -68,8 +68,8 @@ public class GridMover : MonoBehaviour
         if (wrapAround)
         {
             // torus wrap
-            next.x = (next.x + grid.width) % grid.width;
-            next.y = (next.y + grid.height) % grid.height;
+            next.x = (next.x + grid.GetWidth()) % grid.GetWidth();
+            next.y = (next.y + grid.GetHeight()) % grid.GetHeight();
         }
         else
         {

@@ -8,13 +8,13 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - Player
+  - 
   - Water
   - UI
   - 
-  - 
-  - 
-  - 
+  - Grid
+  - Player
+  - Food
   - 
   - 
   - 
@@ -50,3 +50,6 @@ TagManager:
   - Light Layer 5
   - Light Layer 6
   - Light Layer 7
+  - Player outline
+  - Grid outline
+  - Food outline

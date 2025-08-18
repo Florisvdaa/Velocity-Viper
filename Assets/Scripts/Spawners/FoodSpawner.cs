@@ -20,9 +20,9 @@ public class FoodSpawner : MonoBehaviour
 
         // Build list of all free cells
         List<Vector2Int> free = new();
-        for (int x = 0; x < grid.width; x++)
+        for (int x = 0; x < grid.GetWidth(); x++)
         {
-            for (int y = 0; y < grid.height; y++)
+            for (int y = 0; y < grid.GetHeight(); y++)
             {
                 var p = new Vector2Int(x, y);
                 if (blocked == null || !blocked.Contains(p))

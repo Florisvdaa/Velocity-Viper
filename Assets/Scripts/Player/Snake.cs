@@ -123,8 +123,8 @@ public class Snake : MonoBehaviour
 
         if (wrapAround)
         {
-            next.x = (next.x + grid.width) % grid.width;
-            next.y = (next.y + grid.height) % grid.height;
+            next.x = (next.x + grid.GetWidth()) % grid.GetWidth();
+            next.y = (next.y + grid.GetHeight()) % grid.GetHeight();
         }
         else if (!grid.InBounds(next)) { Die("Hit wall"); return; }
 
@@ -209,8 +209,8 @@ public class Snake : MonoBehaviour
             if (!wrapAround && !grid.InBounds(seg)) break;
             if (wrapAround)
             {
-                seg.x = (seg.x + grid.width) % grid.width;
-                seg.y = (seg.y + grid.height) % grid.height;
+                seg.x = (seg.x + grid.GetWidth()) % grid.GetWidth();
+                seg.y = (seg.y + grid.GetHeight()) % grid.GetHeight();
             }
             tmp.Add(seg);
         }
@@ -225,8 +225,8 @@ public class Snake : MonoBehaviour
     }
     Vector3 LerpAcrossWrap(Vector3 from, Vector3 to, float t)
     {
-        float spanX = grid.width * grid.cellSize;
-        float spanZ = grid.height * grid.cellSize;
+        float spanX = grid.GetWidth() * grid.GetCellSize();
+        float spanZ = grid.GetHeight() * grid.GetCellSize();
 
         // Adjust 'to' so we interpolate across the short arc
         Vector3 toAdj = to;
@@ -243,10 +243,10 @@ public class Snake : MonoBehaviour
         Vector3 p = Vector3.Lerp(from, toAdj, t);
 
         // Keep the in-flight point within the board bounds (looks nicer near edges)
-        float minX = grid.origin.x;
-        float maxX = grid.origin.x + spanX;
-        float minZ = grid.origin.z;
-        float maxZ = grid.origin.z + spanZ;
+        float minX = grid.GetOrigin().x;
+        float maxX = grid.GetOrigin().x + spanX;
+        float minZ = grid.GetOrigin().z;
+        float maxZ = grid.GetOrigin().z + spanZ;
 
         if (p.x < minX) p.x += spanX; else if (p.x > maxX) p.x -= spanX;
         if (p.z < minZ) p.z += spanZ; else if (p.z > maxZ) p.z -= spanZ;
