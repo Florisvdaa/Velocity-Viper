@@ -24,7 +24,7 @@ public class Snake : MonoBehaviour
     private Vector2Int head;
     private Vector2Int dir = Vector2Int.right;
     private Vector2Int nextDir;
-    private bool isAlive = true;
+    private bool isAlive = false;
 
     // Tick
     private float timer;
@@ -64,6 +64,11 @@ public class Snake : MonoBehaviour
         transform.position = headTo;
 
         if (spawner != null) spawner.Respawn(OccupiedCells());
+    }
+
+    public void StartMovement()
+    {
+        isAlive = true;
     }
 
     void Update()
@@ -154,6 +159,8 @@ public class Snake : MonoBehaviour
             bodyObjs.Add(segT);           // append at the end
             segFrom.Add(tailStart);       // doesn't move this tick
             segTo.Add(tailStart);
+
+            GameManager.Instance.AddScore();
         }
         else if (body.Count > 0)
         {
