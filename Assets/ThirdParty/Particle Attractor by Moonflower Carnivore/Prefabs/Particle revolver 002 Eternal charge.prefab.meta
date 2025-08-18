@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 1eb29fd5f7a8920409dcd8cec44ecb6c
+timeCreated: 1492105513
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 86896
+  packageName: Particle Attractor
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/Particle Attractor by Moonflower Carnivore/Prefabs/Particle
+    revolver 002 Eternal charge.prefab
+  uploadId: 174121

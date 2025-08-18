@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 506a06125115f2f49b5ee51567bae10c
+timeCreated: 1491021372
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 86896
+  packageName: Particle Attractor
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/Particle Attractor by Moonflower Carnivore/Prefabs/Particle
+    revolver 001 Megido.prefab
+  uploadId: 174121

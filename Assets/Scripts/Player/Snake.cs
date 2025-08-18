@@ -278,6 +278,14 @@ public class Snake : MonoBehaviour
         return occ;
     }
 
+    public Transform GetBodyTransformAt(int indexFromHead)
+    {
+        // bodyObjs[0] is right behind the head
+        if (indexFromHead < 0 || indexFromHead >= bodyObjs.Count)
+            return null;
+        return bodyObjs[indexFromHead];
+    }
+
     public Vector2Int GetHead() => head;
     public IReadOnlyList<Vector2Int> GetBody() => body;
     public bool IsAlive() => isAlive;

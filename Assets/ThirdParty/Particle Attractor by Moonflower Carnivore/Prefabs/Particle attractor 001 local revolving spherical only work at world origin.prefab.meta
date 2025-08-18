@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: f927701c2a3a60e4eb9df90fb730c263
+timeCreated: 1490975974
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 86896
+  packageName: Particle Attractor
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/Particle Attractor by Moonflower Carnivore/Prefabs/Particle
+    attractor 001 local revolving spherical only work at world origin.prefab
+  uploadId: 174121

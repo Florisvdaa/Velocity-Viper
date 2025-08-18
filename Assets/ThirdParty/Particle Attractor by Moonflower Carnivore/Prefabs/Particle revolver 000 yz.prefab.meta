@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: e6befcf183056214bbc7cb055f062e04
+timeCreated: 1491005984
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 86896
+  packageName: Particle Attractor
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/Particle Attractor by Moonflower Carnivore/Prefabs/Particle
+    revolver 000 yz.prefab
+  uploadId: 174121
