@@ -7,7 +7,9 @@ public class Snake : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private Grid2D grid;
     [SerializeField] private Transform segmentPrefab;
+    [SerializeField] private Transform tailPrefab;
     [SerializeField] private FoodSpawner spawner;
+    [SerializeField] private Transform headVisual;
 
     [Header("Movement (smooth)")]
     [SerializeField] private float baseStepDelay = 0.14f;
@@ -64,6 +66,9 @@ public class Snake : MonoBehaviour
         transform.position = headTo;
 
         if (spawner != null) spawner.Respawn(OccupiedCells());
+
+        UpdateHeadRotation();
+        InitTailRotationOnce();
     }
 
     public void StartMovement()
@@ -124,6 +129,7 @@ public class Snake : MonoBehaviour
 
         // 2) next head cell...
         dir = nextDir;
+        UpdateHeadRotation();
         Vector2Int next = head + dir;
 
         if (wrapAround)
@@ -151,13 +157,23 @@ public class Snake : MonoBehaviour
             // grow on the GRID at the head (classic snake)
             body.Insert(0, prevHead);
 
-            // --- NEW: spawn the VISUAL at the TAIL end ---
+            // --- visuals ---
             int oldSegCount = segFrom.Count;
-            Vector3 tailStart = (oldSegCount > 0) ? segFrom[oldSegCount - 1] : headFrom; // old tail's start this tick
 
-            var segT = Instantiate(segmentPrefab, tailStart, Quaternion.identity, transform);
-            bodyObjs.Add(segT);           // append at the end
-            segFrom.Add(tailStart);       // doesn't move this tick
+            // previous tail (if any) becomes a mid segment
+            if (oldSegCount > 0)
+            {
+                ReplaceBodyVisualAt(oldSegCount - 1, segmentPrefab);
+            }
+
+            // spawn the new tail VISUAL at the old tail start
+            Vector3 tailStart = (oldSegCount > 0) ? segFrom[oldSegCount - 1] : headFrom;
+
+            var tailObj = Instantiate(tailPrefab != null ? tailPrefab : segmentPrefab,
+                                      tailStart, Quaternion.identity, transform);
+
+            bodyObjs.Add(tailObj);
+            segFrom.Add(tailStart);   // doesn't move this tick
             segTo.Add(tailStart);
 
             GameManager.Instance.AddScore();
@@ -189,13 +205,55 @@ public class Snake : MonoBehaviour
         if (ate && spawner != null)
             spawner.Respawn(OccupiedCells());
     }
+    void ReplaceBodyVisualAt(int index, Transform prefab)
+    {
+        if (prefab == null || index < 0 || index >= bodyObjs.Count) return;
 
+        var old = bodyObjs[index];
+        if (old == null) return;
+
+        var pos = old.position;
+        var rot = old.rotation;
+
+        // Replace the object
+        var newObj = Instantiate(prefab, pos, rot, transform);
+        bodyObjs[index] = newObj;
+
+        Destroy(old.gameObject);
+    }
+    void UpdateHeadRotation()
+    {
+        if (headVisual == null) return;
+
+        // dir (x,y) maps to world (x,z)
+        Vector3 fwd = new Vector3(dir.x, 0f, dir.y);
+        if (fwd.sqrMagnitude > 0.0f)
+        {
+            headVisual.rotation = Quaternion.LookRotation(fwd, Vector3.up);
+            tailPrefab.rotation = Quaternion.LookRotation(fwd,Vector3.up);
+        }
+    }
 
     void RenderLerp(float t)
     {
+        // move head
         transform.position = LerpAcrossWrap(headFrom, headTo, t);
+
+        // move body
         for (int i = 0; i < bodyObjs.Count; i++)
             bodyObjs[i].position = LerpAcrossWrap(segFrom[i], segTo[i], t);
+
+        // --- rotate tail (last segment) toward its movement ---
+        int tailIdx = bodyObjs.Count - 1;
+        if (tailIdx >= 0)
+        {
+            Vector3 fwd = ForwardAcrossWrap(segFrom[tailIdx], segTo[tailIdx]);
+            if (fwd.sqrMagnitude > 1e-6f)
+            {
+                bodyObjs[tailIdx].rotation = Quaternion.LookRotation(fwd, Vector3.up);
+            }
+            // else: tail didn't move this tick (e.g., on growth) -> keep previous rotation
+        }
     }
 
     void BuildInitialBody(int length)
@@ -226,9 +284,24 @@ public class Snake : MonoBehaviour
 
         for (int i = 0; i < body.Count; i++)
         {
-            var segT = Instantiate(segmentPrefab, grid.GridToWorld(body[i]), Quaternion.identity, transform);
+            // last one = tail
+            var prefab = (i == body.Count - 1) ? tailPrefab : segmentPrefab;
+            if (prefab == null) prefab = segmentPrefab; // fallback
+
+            var segT = Instantiate(prefab, grid.GridToWorld(body[i]), Quaternion.identity, transform);
             bodyObjs.Add(segT);
         }
+    }
+    void InitTailRotationOnce()
+    {
+        int tailIdx = bodyObjs.Count - 1;
+        if (tailIdx < 0) return;
+
+        // When idle, the tail’s next move is toward its predecessor’s start position (or the head’s start if it’s the only segment)
+        Vector3 nextTarget = (tailIdx > 0) ? segFrom[tailIdx - 1] : headFrom;
+        Vector3 fwd = ForwardAcrossWrap(segFrom[tailIdx], nextTarget);
+        if (fwd.sqrMagnitude > 1e-6f)
+            bodyObjs[tailIdx].rotation = Quaternion.LookRotation(fwd, Vector3.up);
     }
     Vector3 LerpAcrossWrap(Vector3 from, Vector3 to, float t)
     {
@@ -263,9 +336,28 @@ public class Snake : MonoBehaviour
 
         return p;
     }
+    Vector3 ForwardAcrossWrap(Vector3 from, Vector3 to)
+    {
+        float spanX = grid.GetWidth() * grid.GetCellSize();
+        float spanZ = grid.GetHeight() * grid.GetCellSize();
+
+        Vector3 toAdj = to;
+
+        float dx = to.x - from.x;
+        if (Mathf.Abs(dx) > spanX * 0.5f)
+            toAdj.x += (dx > 0f) ? -spanX : spanX;
+
+        float dz = to.z - from.z;
+        if (Mathf.Abs(dz) > spanZ * 0.5f)
+            toAdj.z += (dz > 0f) ? -spanZ : spanZ;
+
+        return toAdj - from;
+    }
 
     void Die(string reason)
     {
+        FeedbackManager.Instance.CameraShake().PlayFeedbacks();
+
         isAlive = false;
         timer = 0f;
         Debug.Log($"Snake died: {reason}");
@@ -286,6 +378,10 @@ public class Snake : MonoBehaviour
         return bodyObjs[indexFromHead];
     }
 
+    public void ChangeWrap(bool wrap)
+    {
+        wrapAround = wrap;
+    }
     public Vector2Int GetHead() => head;
     public IReadOnlyList<Vector2Int> GetBody() => body;
     public bool IsAlive() => isAlive;

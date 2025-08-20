@@ -19,11 +19,15 @@ public class GameManager : MonoBehaviour
             Instance = this;
         }
     }
-    public void StartGame()
+    public void StartGame(bool walls)
     {
+        if (snakePlayer != null)
+            snakePlayer.ChangeWrap(walls);
+
         if(snakePlayer != null)
             snakePlayer.StartMovement();
     }
+
     public void AddScore()
     {
         score++;
