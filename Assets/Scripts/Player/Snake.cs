@@ -1,9 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Transform))]
 public class Snake : MonoBehaviour
-{
+{ 
     [Header("Refs")]
     [SerializeField] private Grid2D grid;
     [SerializeField] private Transform segmentPrefab;
@@ -18,9 +19,25 @@ public class Snake : MonoBehaviour
     [SerializeField] private float delayFactorPerSegment = 0.98f;
 
     [Header("Start")]
-    [Min(1)][SerializeField] private int startLength = 3; // head counts as 1
-    [SerializeField] private Vector2Int startGridPos = new Vector2Int(3, 3);
+    [Min(1)][SerializeField] private int startLength = 3;         // head counts as 1
+    [SerializeField] private Vector2Int startGridPos = new(3, 3);
     [SerializeField] private bool wrapAround = false;
+
+    [Header("Death FX")]
+    [Tooltip("Small burst for normal body pops.")]
+    [SerializeField] private ParticleSystem explodeFxPrefab;
+    [Tooltip("Optional bigger burst for the head. If null, we scale the small one.")]
+    [SerializeField] private ParticleSystem headExplodeFxPrefab;
+    [Tooltip("Base delay between each pop.")]
+    [SerializeField] private float explodeInterval = 0.06f;
+    [Tooltip("0.2 = ±20% random jitter around base delay.")]
+    [Range(0f, 1f)][SerializeField] private float explodeIntervalJitter = 0.2f;
+    [Tooltip("Scale multiplier for head burst when no dedicated head FX is set.")]
+    [SerializeField] private float headExplodeScale = 1.8f;
+    [Tooltip("Pause after the head burst before signaling game over etc.")]
+    [SerializeField] private float headExplodeExtraDelay = 0.15f;
+    [Tooltip("Destroy objects or just hide them.")]
+    [SerializeField] private bool destroyPieces = true;
 
     // Grid state
     private Vector2Int head;
@@ -28,19 +45,21 @@ public class Snake : MonoBehaviour
     private Vector2Int nextDir;
     private bool isAlive = false;
 
-    // Tick
+    // Tick timer
     private float timer;
 
-    // Tail: body[0] = segment right behind head (grid cells)
+    // Body data: body[0] is the grid cell right behind the head
     private readonly List<Vector2Int> body = new();
 
-    // Visuals: fixed order (0 behind head … tail). We DO NOT rotate these on a normal move.
+    // Body visuals (same order as body)
     private readonly List<Transform> bodyObjs = new();
 
-    // Lerp buffers (world)
+    // Lerp buffers (world space)
     private Vector3 headFrom, headTo;
     private readonly List<Vector3> segFrom = new();
     private readonly List<Vector3> segTo = new();
+
+    // Unity
 
     void Start()
     {
@@ -60,21 +79,18 @@ public class Snake : MonoBehaviour
             var p = grid.GridToWorld(body[i]);
             segFrom.Add(p);
             segTo.Add(p);
-            bodyObjs[i].position = p;
+            bodyObjs[i].position = p; // set initial positions
         }
 
         transform.position = headTo;
 
         if (spawner != null) spawner.Respawn(OccupiedCells());
 
-        UpdateHeadRotation();
+        UpdateHeadRotation(); // head only; body has no rotation
         InitTailRotationOnce();
     }
 
-    public void StartMovement()
-    {
-        isAlive = true;
-    }
+    public void StartMovement() => isAlive = true;
 
     void Update()
     {
@@ -92,13 +108,16 @@ public class Snake : MonoBehaviour
         {
             timer -= stepDelay;
             DoStepAndSetupLerps();
-            // in case speed changed with growth
+
+            // speed may change with length
             stepDelay = GetCurrentStepDelay();
             RenderLerp(0f);
         }
     }
 
-    void ReadInput()
+    // Input / Movement
+
+    private void ReadInput()
     {
         Vector2Int input = Vector2Int.zero;
         if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)) input = Vector2Int.up;
@@ -108,30 +127,32 @@ public class Snake : MonoBehaviour
 
         if (input != Vector2Int.zero)
         {
+            // ignore reversing into yourself
             bool reverse = (input + dir) == Vector2Int.zero;
             if (!reverse) nextDir = input;
         }
     }
 
-    float GetCurrentStepDelay()
+    private float GetCurrentStepDelay()
     {
         int segs = body.Count;
         float d = baseStepDelay * Mathf.Pow(delayFactorPerSegment, segs);
         return Mathf.Max(minStepDelay, d);
     }
 
-    void DoStepAndSetupLerps()
+    private void DoStepAndSetupLerps()
     {
-        // 1) freeze "from"
+        // freeze current positions for lerp
         headFrom = headTo;
         for (int i = 0; i < segFrom.Count; i++)
             segFrom[i] = segTo[i];
 
-        // 2) next head cell...
+        // compute next head cell
         dir = nextDir;
         UpdateHeadRotation();
         Vector2Int next = head + dir;
 
+        // wrap/clip
         if (wrapAround)
         {
             next.x = (next.x + grid.GetWidth()) % grid.GetWidth();
@@ -141,56 +162,50 @@ public class Snake : MonoBehaviour
 
         bool ate = (spawner != null && spawner.HasFood && spawner.CurrentFood == next);
 
-        // 3) self collision (tail end vacates if not eating)
-        Vector2Int tailWillVacate = (!ate && body.Count > 0) ? body[^1] : new Vector2Int(int.MinValue, int.MinValue);
+        // self collision (tail end vacates if not eating)
+        Vector2Int tailWillVacate = (!ate && body.Count > 0) ? body[^1] : new(int.MinValue, int.MinValue);
         for (int i = 0; i < body.Count; i++)
         {
             if (body[i] == next && body[i] != tailWillVacate)
             { Die("Hit self"); return; }
         }
 
-        // 4) move grid state
+        // update grid state
         Vector2Int prevHead = head;
 
         if (ate)
         {
-            // grow on the GRID at the head (classic snake)
+            // grow at head
             body.Insert(0, prevHead);
 
-            // --- visuals ---
+            // visuals: turn last tail into mid segment
             int oldSegCount = segFrom.Count;
+            if (oldSegCount > 0) ReplaceBodyVisualAt(oldSegCount - 1, segmentPrefab);
 
-            // previous tail (if any) becomes a mid segment
-            if (oldSegCount > 0)
-            {
-                ReplaceBodyVisualAt(oldSegCount - 1, segmentPrefab);
-            }
-
-            // spawn the new tail VISUAL at the old tail start
+            // spawn new tail visual where the old tail started (or head start if length==1)
             Vector3 tailStart = (oldSegCount > 0) ? segFrom[oldSegCount - 1] : headFrom;
-
             var tailObj = Instantiate(tailPrefab != null ? tailPrefab : segmentPrefab,
                                       tailStart, Quaternion.identity, transform);
 
             bodyObjs.Add(tailObj);
-            segFrom.Add(tailStart);   // doesn't move this tick
+            segFrom.Add(tailStart);
             segTo.Add(tailStart);
 
             GameManager.Instance.AddScore();
         }
         else if (body.Count > 0)
         {
-            // shift grid cells (no visual rotation)
+            // shift body forward
             body.RemoveAt(body.Count - 1);
             body.Insert(0, prevHead);
         }
 
         head = next;
 
-        // 5) targets
+        // set new lerp targets
         headTo = grid.GridToWorld(head);
 
-        // make sure buffers match counts (safety, usually already correct)
+        // keep buffers sized
         while (segFrom.Count < body.Count) { segFrom.Add(headFrom); segTo.Add(headFrom); }
         while (segFrom.Count > body.Count) { segFrom.RemoveAt(segFrom.Count - 1); segTo.RemoveAt(segTo.Count - 1); }
 
@@ -198,65 +213,70 @@ public class Snake : MonoBehaviour
         {
             segTo[0] = headFrom;                 // neck goes to where head started
             for (int i = 1; i < body.Count; i++)
-                segTo[i] = segFrom[i - 1];       // each seg follows predecessor's start
+                segTo[i] = segFrom[i - 1];       // others follow predecessor's start
         }
 
-        // 6) respawn food
-        if (ate && spawner != null)
-            spawner.Respawn(OccupiedCells());
+        // respawn food
+        if (ate && spawner != null) spawner.Respawn(OccupiedCells());
     }
-    void ReplaceBodyVisualAt(int index, Transform prefab)
+
+    private void ReplaceBodyVisualAt(int index, Transform prefab)
     {
-        if (prefab == null || index < 0 || index >= bodyObjs.Count) return;
-
+        if (!prefab || index < 0 || index >= bodyObjs.Count) return;
         var old = bodyObjs[index];
-        if (old == null) return;
+        if (!old) return;
 
-        var pos = old.position;
-        var rot = old.rotation;
-
-        // Replace the object
-        var newObj = Instantiate(prefab, pos, rot, transform);
+        var newObj = Instantiate(prefab, old.position, old.rotation, transform);
         bodyObjs[index] = newObj;
-
         Destroy(old.gameObject);
     }
-    void UpdateHeadRotation()
-    {
-        if (headVisual == null) return;
 
-        // dir (x,y) maps to world (x,z)
-        Vector3 fwd = new Vector3(dir.x, 0f, dir.y);
+    private void UpdateHeadRotation()
+    {
+        // rotate HEAD only (no body rotation)
+        if (!headVisual) return;
+        Vector3 fwd = new(dir.x, 0f, dir.y);     // grid (x,y) -> world (x,z)
         if (fwd.sqrMagnitude > 0.0f)
-        {
             headVisual.rotation = Quaternion.LookRotation(fwd, Vector3.up);
-            tailPrefab.rotation = Quaternion.LookRotation(fwd,Vector3.up);
-        }
+    }
+    // Sets the initial rotation of the tail once at spawn
+    private void InitTailRotationOnce()
+    {
+        int tailIdx = bodyObjs.Count - 1;
+        if (tailIdx < 0) return;
+
+        // tail looks toward its predecessor (or the head if only 1 segment)
+        Vector3 nextTarget = (tailIdx > 0) ? segFrom[tailIdx - 1] : headFrom;
+        Vector3 fwd = ForwardAcrossWrap(segFrom[tailIdx], nextTarget);
+
+        if (fwd.sqrMagnitude > 1e-6f)
+            bodyObjs[tailIdx].rotation = Quaternion.LookRotation(fwd, Vector3.up);
     }
 
-    void RenderLerp(float t)
+
+    private void RenderLerp(float t)
     {
         // move head
         transform.position = LerpAcrossWrap(headFrom, headTo, t);
 
-        // move body
+        // move body (no rotation for mid segments)
         for (int i = 0; i < bodyObjs.Count; i++)
             bodyObjs[i].position = LerpAcrossWrap(segFrom[i], segTo[i], t);
 
-        // --- rotate tail (last segment) toward its movement ---
+        // rotate ONLY the tail (last segment) 
         int tailIdx = bodyObjs.Count - 1;
-        if (tailIdx >= 0)
+        if (tailIdx >= 0) // safety
         {
             Vector3 fwd = ForwardAcrossWrap(segFrom[tailIdx], segTo[tailIdx]);
-            if (fwd.sqrMagnitude > 1e-6f)
+            if (fwd.sqrMagnitude > 1e-6f) // avoid NaN rotation if no movement
             {
                 bodyObjs[tailIdx].rotation = Quaternion.LookRotation(fwd, Vector3.up);
             }
-            // else: tail didn't move this tick (e.g., on growth) -> keep previous rotation
         }
     }
 
-    void BuildInitialBody(int length)
+
+    private void BuildInitialBody(int length)
     {
         int tailSegments = Mathf.Max(0, length - 1);
 
@@ -279,64 +299,47 @@ public class Snake : MonoBehaviour
             }
             tmp.Add(seg);
         }
-        tmp.Reverse(); // body[0] sits right behind the head
+        tmp.Reverse(); // body[0] sits right behind head
         body.AddRange(tmp);
 
         for (int i = 0; i < body.Count; i++)
         {
-            // last one = tail
             var prefab = (i == body.Count - 1) ? tailPrefab : segmentPrefab;
-            if (prefab == null) prefab = segmentPrefab; // fallback
-
+            if (!prefab) prefab = segmentPrefab; // fallback
             var segT = Instantiate(prefab, grid.GridToWorld(body[i]), Quaternion.identity, transform);
             bodyObjs.Add(segT);
         }
     }
-    void InitTailRotationOnce()
-    {
-        int tailIdx = bodyObjs.Count - 1;
-        if (tailIdx < 0) return;
 
-        // When idle, the tail’s next move is toward its predecessor’s start position (or the head’s start if it’s the only segment)
-        Vector3 nextTarget = (tailIdx > 0) ? segFrom[tailIdx - 1] : headFrom;
-        Vector3 fwd = ForwardAcrossWrap(segFrom[tailIdx], nextTarget);
-        if (fwd.sqrMagnitude > 1e-6f)
-            bodyObjs[tailIdx].rotation = Quaternion.LookRotation(fwd, Vector3.up);
-    }
-    Vector3 LerpAcrossWrap(Vector3 from, Vector3 to, float t)
+    // Wrap helper
+
+    private Vector3 LerpAcrossWrap(Vector3 from, Vector3 to, float t)
     {
         float spanX = grid.GetWidth() * grid.GetCellSize();
         float spanZ = grid.GetHeight() * grid.GetCellSize();
 
-        // Adjust 'to' so we interpolate across the short arc
+        // choose the short path across wrap
         Vector3 toAdj = to;
-
         float dx = to.x - from.x;
-        if (Mathf.Abs(dx) > spanX * 0.5f)
-            toAdj.x += (dx > 0f) ? -spanX : spanX;
-
+        if (Mathf.Abs(dx) > spanX * 0.5f) toAdj.x += (dx > 0f) ? -spanX : spanX;
         float dz = to.z - from.z;
-        if (Mathf.Abs(dz) > spanZ * 0.5f)
-            toAdj.z += (dz > 0f) ? -spanZ : spanZ;
+        if (Mathf.Abs(dz) > spanZ * 0.5f) toAdj.z += (dz > 0f) ? -spanZ : spanZ;
 
-        // Interpolate toward adjusted target
+        // interpolate
         Vector3 p = Vector3.Lerp(from, toAdj, t);
 
-        // Keep the in-flight point within the board bounds (looks nicer near edges)
-        float minX = grid.GetOrigin().x;
-        float maxX = grid.GetOrigin().x + spanX;
-        float minZ = grid.GetOrigin().z;
-        float maxZ = grid.GetOrigin().z + spanZ;
-
+        // keep point within board bounds during flight
+        float minX = grid.GetOrigin().x, maxX = minX + spanX;
+        float minZ = grid.GetOrigin().z, maxZ = minZ + spanZ;
         if (p.x < minX) p.x += spanX; else if (p.x > maxX) p.x -= spanX;
         if (p.z < minZ) p.z += spanZ; else if (p.z > maxZ) p.z -= spanZ;
 
-        // At the end of the tick, snap to the canonical 'to' (prevents 1-frame offset)
+        // snap at the end of the tick
         if (t >= 0.999f) return to;
-
         return p;
     }
-    Vector3 ForwardAcrossWrap(Vector3 from, Vector3 to)
+    // Forward vector from -> to, adjusted for wrap-around edges
+    private Vector3 ForwardAcrossWrap(Vector3 from, Vector3 to)
     {
         float spanX = grid.GetWidth() * grid.GetCellSize();
         float spanZ = grid.GetHeight() * grid.GetCellSize();
@@ -354,14 +357,94 @@ public class Snake : MonoBehaviour
         return toAdj - from;
     }
 
-    void Die(string reason)
+
+    // Death & Explosions
+
+    private void Die(string reason)
     {
         FeedbackManager.Instance.CameraShake().PlayFeedbacks();
 
-        isAlive = false;
+        isAlive = false;  // Update() stops driving movement
         timer = 0f;
+
         Debug.Log($"Snake died: {reason}");
+        StartCoroutine(ExplodeRoutine());
     }
+
+    private IEnumerator ExplodeRoutine()
+    {
+        // Build a randomized explosion order by copying and shuffling the transforms.
+        var order = new List<Transform>(bodyObjs);
+        Shuffle(order);
+
+        // Pop each body segment in the randomized order.
+        foreach (var seg in order)
+        {
+            if (seg == null) continue;
+
+            // Find current index (lists shrink during the loop).
+            int i = bodyObjs.IndexOf(seg);
+            if (i >= 0)
+            {
+                SpawnFx(seg.position, big: false);
+
+                if (destroyPieces) Destroy(seg.gameObject);
+                else seg.gameObject.SetActive(false);
+
+                // Keep data in sync.
+                body.RemoveAt(i);
+                bodyObjs.RemoveAt(i);
+                if (i < segFrom.Count) { segFrom.RemoveAt(i); segTo.RemoveAt(i); }
+            }
+
+            yield return new WaitForSeconds(GetExplodeDelay());
+        }
+
+        // Big head pop at the end.
+        SpawnFx(transform.position, big: true);
+        if (headVisual) headVisual.gameObject.SetActive(false);
+
+        if (headExplodeExtraDelay > 0f)
+            yield return new WaitForSeconds(headExplodeExtraDelay);
+
+        // Game over hook:
+        // GameManager.Instance.OnSnakeDied();
+    }
+
+    // Fisher–Yates shuffle
+    private static void Shuffle<T>(IList<T> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+    }
+
+    private float GetExplodeDelay()
+    {
+        if (explodeIntervalJitter <= 0f) return Mathf.Max(0f, explodeInterval);
+        float min = explodeInterval * (1f - explodeIntervalJitter);
+        float max = explodeInterval * (1f + explodeIntervalJitter);
+        return Mathf.Max(0f, Random.Range(min, max));
+    }
+
+    private void SpawnFx(Vector3 pos, bool big)
+    {
+        ParticleSystem prefab = big && headExplodeFxPrefab != null ? headExplodeFxPrefab : explodeFxPrefab;
+        if (!prefab) return;
+
+        var fx = Instantiate(prefab, pos, Quaternion.identity);
+
+        // scale up the small burst for the head if needed
+        if (big && headExplodeFxPrefab == null && headExplodeScale > 1f)
+            fx.transform.localScale *= headExplodeScale;
+
+        var main = fx.main;
+        Destroy(fx.gameObject, main.duration + main.startLifetime.constantMax + 0.1f);
+    }
+
+    // Public helpers
 
     public HashSet<Vector2Int> OccupiedCells()
     {
@@ -372,16 +455,12 @@ public class Snake : MonoBehaviour
 
     public Transform GetBodyTransformAt(int indexFromHead)
     {
-        // bodyObjs[0] is right behind the head
-        if (indexFromHead < 0 || indexFromHead >= bodyObjs.Count)
-            return null;
+        if (indexFromHead < 0 || indexFromHead >= bodyObjs.Count) return null;
         return bodyObjs[indexFromHead];
     }
 
-    public void ChangeWrap(bool wrap)
-    {
-        wrapAround = wrap;
-    }
+    public void ChangeWrap(bool wrap) => wrapAround = wrap;
+
     public Vector2Int GetHead() => head;
     public IReadOnlyList<Vector2Int> GetBody() => body;
     public bool IsAlive() => isAlive;

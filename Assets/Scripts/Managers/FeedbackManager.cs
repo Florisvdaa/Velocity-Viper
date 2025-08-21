@@ -6,6 +6,8 @@ public class FeedbackManager : MonoBehaviour
 
 
     [SerializeField] private MMF_Player camShakeFeedback;
+    [SerializeField] private MMF_Player raiseWallsFeedback;
+    [SerializeField] private MMF_Player collapseWallsFeedback;
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -19,4 +21,6 @@ public class FeedbackManager : MonoBehaviour
     }
 
     public MMF_Player CameraShake() => camShakeFeedback;
+    public MMF_Player RaiseWalls() => raiseWallsFeedback;
+    public MMF_Player collapseWalls() => collapseWallsFeedback;
 }
